@@ -21,6 +21,18 @@ Valider konfigurasjonen uten aa starte lytteren:
 uv run python -m ticket_listener.cli --config config.toml --check-config
 ```
 
+Legg til en bruker som skal varsles paa telefon:
+
+```powershell
+uv run python -m ticket_listener.cli --config config.toml --add-subscriber "+4712345678" --subscriber-name "Lars"
+```
+
+List brukere:
+
+```powershell
+uv run python -m ticket_listener.cli --config config.toml --list-subscribers
+```
+
 ## Kjore i bakgrunnen paa Windows
 
 Start skjult i bakgrunnen:

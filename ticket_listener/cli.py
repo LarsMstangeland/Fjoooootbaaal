@@ -8,6 +8,7 @@ from pathlib import Path
 
 from ticket_listener.config import load_config
 from ticket_listener.monitor import TicketMonitor
+from ticket_listener.subscribers import Subscriber, SubscriberStore
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -30,6 +31,24 @@ def build_parser() -> argparse.ArgumentParser:
         "--check-config",
         action="store_true",
         help="Validate the config file and exit without monitoring.",
+    )
+    parser.add_argument(
+        "--add-subscriber",
+        metavar="PHONE",
+        help="Add or update a subscriber phone number, then exit.",
+    )
+    parser.add_argument(
+        "--subscriber-name",
+        help="Optional name to store with --add-subscriber.",
+    )
+    parser.add_argument(
+        "--subscriber-target",
+        help="Optional target name for --add-subscriber. Omit to receive all targets.",
+    )
+    parser.add_argument(
+        "--list-subscribers",
+        action="store_true",
+        help="List stored subscribers, then exit.",
     )
     return parser
 
@@ -56,6 +75,28 @@ def main(argv: list[str] | None = None) -> int:
             logging.getLogger(__name__).info(
                 "config OK: %s enabled target(s)", len(config.enabled_targets)
             )
+            return 0
+
+        store = SubscriberStore(Path(config.service.subscribers_path))
+        if args.add_subscriber:
+            store.add(
+                Subscriber(
+                    phone=args.add_subscriber,
+                    name=args.subscriber_name,
+                    target=args.subscriber_target,
+                )
+            )
+            logging.getLogger(__name__).info("subscriber saved: %s", args.add_subscriber)
+            return 0
+
+        if args.list_subscribers:
+            for subscriber in store.list():
+                logging.getLogger(__name__).info(
+                    "subscriber phone=%s name=%s target=%s",
+                    subscriber.phone,
+                    subscriber.name or "",
+                    subscriber.target or "all",
+                )
             return 0
 
         monitor = TicketMonitor(config, should_stop=lambda: stop_requested)

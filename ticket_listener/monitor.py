@@ -3,16 +3,19 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from html import unescape
+from pathlib import Path
 from typing import Callable
 import logging
 import re
 import time
 import urllib.error
 import urllib.request
+import urllib.parse
 import webbrowser
 
 from ticket_listener.config import Config, TargetConfig
-from ticket_listener.notify import send_webhook
+from ticket_listener.notify import send_sms_webhook, send_webhook
+from ticket_listener.subscribers import SubscriberStore
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +38,7 @@ class TicketMonitor:
         self.config = config
         self.should_stop = should_stop or (lambda: False)
         self.targets = [self._compile_target(target) for target in config.enabled_targets]
+        self.subscribers = SubscriberStore(Path(config.service.subscribers_path))
         self.already_notified: set[str] = set()
 
     def run(self) -> None:
@@ -113,6 +117,7 @@ class TicketMonitor:
         logger.warning(message)
 
         send_webhook(self.config.actions.webhook_url, message, self.config.app.request_timeout_secs)
+        self._notify_subscribers(target)
 
         if self.config.actions.open_browser:
             webbrowser.open(open_url)
@@ -133,3 +138,37 @@ class TicketMonitor:
             else None,
         )
 
+    def _notify_subscribers(self, target: TargetConfig) -> None:
+        subscribers = self.subscribers.list(target.name)
+        if not subscribers:
+            logger.warning("no phone subscribers registered for %s", target.name)
+            return
+
+        for subscriber in subscribers:
+            form_link = self._build_purchase_form_link(target, subscriber.phone)
+            message = f"{target.name} may be open. Continue here: {form_link}"
+            send_sms_webhook(
+                self.config.sms.webhook_url,
+                subscriber.phone,
+                message,
+                self.config.app.request_timeout_secs,
+                self.config.sms.dry_run,
+            )
+
+    def _build_purchase_form_link(self, target: TargetConfig, phone: str) -> str:
+        base_url = (
+            target.purchase_form_url
+            or self.config.service.purchase_form_url
+            or target.open_url
+            or target.url
+        )
+        query = {
+            "phone": phone,
+            "target": target.name,
+            "ticket_url": target.open_url or target.url,
+        }
+        if target.prefill:
+            query.update(target.prefill)
+
+        separator = "&" if urllib.parse.urlparse(base_url).query else "?"
+        return f"{base_url}{separator}{urllib.parse.urlencode(query)}"

@@ -1,6 +1,9 @@
 /.venv/
 /.env
 /config.toml
+/subscribers.json
 /logs/
+/work/
+/outputs/
 __pycache__/
 *.pyc

@@ -9,14 +9,27 @@ notify_once_per_target = true
 # Optional Discord/Slack-style webhook. Leave blank to disable.
 # webhook_url = "https://discord.com/api/webhooks/..."
 
+[service]
+subscribers_path = "subscribers.json"
+# Base form users receive before purchase. Query params are appended automatically.
+purchase_form_url = "https://example.com/ticket-request"
+
+[sms]
+# Dry-run logs SMS payloads instead of sending them. Set to false when webhook_url is real.
+dry_run = true
+# Generic SMS gateway webhook. It receives JSON: {"to": "+4712345678", "message": "..."}
+# webhook_url = "https://your-sms-provider.example/send"
+
 [[targets]]
 name = "Example club tickets"
 enabled = true
 url = "https://example.com/tickets"
 # The monitor marks this as available if this regex matches the response body.
-available_regex = "(?i)(buy now|add to basket|tickets available|kjøp|ledig)"
+available_regex = "(?i)(buy now|add to basket|tickets available|kjop|ledig)"
 # If this regex matches, it overrides available_regex and marks the page as sold out.
 sold_out_regex = "(?i)(sold out|utsolgt|no tickets|ikke tilgjengelig)"
 # Optional: open a separate URL when available, e.g. the exact checkout/event URL.
 open_url = "https://example.com/tickets"
-
+# Optional target-specific form URL. Falls back to [service].purchase_form_url.
+# purchase_form_url = "https://example.com/ticket-request"
+prefill = { event = "Example club tickets", quantity = "2" }

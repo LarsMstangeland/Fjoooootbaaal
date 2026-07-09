@@ -21,6 +21,18 @@ class ActionConfig:
 
 
 @dataclass(frozen=True)
+class ServiceConfig:
+    subscribers_path: str = "subscribers.json"
+    purchase_form_url: str | None = None
+
+
+@dataclass(frozen=True)
+class SmsConfig:
+    webhook_url: str | None = None
+    dry_run: bool = True
+
+
+@dataclass(frozen=True)
 class TargetConfig:
     name: str
     url: str
@@ -28,12 +40,16 @@ class TargetConfig:
     enabled: bool = True
     sold_out_regex: str | None = None
     open_url: str | None = None
+    purchase_form_url: str | None = None
+    prefill: dict[str, str] | None = None
 
 
 @dataclass(frozen=True)
 class Config:
     app: AppConfig
     actions: ActionConfig
+    service: ServiceConfig
+    sms: SmsConfig
     targets: list[TargetConfig]
 
     @property
@@ -52,9 +68,11 @@ def load_config(path: Path) -> Config:
 
     app = _load_app(raw.get("app", {}))
     actions = _load_actions(raw.get("actions", {}))
+    service = _load_service(raw.get("service", {}))
+    sms = _load_sms(raw.get("sms", {}))
     targets = [_load_target(item) for item in raw.get("targets", [])]
 
-    config = Config(app=app, actions=actions, targets=targets)
+    config = Config(app=app, actions=actions, service=service, sms=sms, targets=targets)
     if not config.enabled_targets:
         raise ValueError("No enabled targets configured.")
 
@@ -80,6 +98,22 @@ def _load_actions(raw: dict[str, Any]) -> ActionConfig:
     )
 
 
+def _load_service(raw: dict[str, Any]) -> ServiceConfig:
+    purchase_form_url = raw.get("purchase_form_url")
+    return ServiceConfig(
+        subscribers_path=str(raw.get("subscribers_path", "subscribers.json")),
+        purchase_form_url=str(purchase_form_url) if purchase_form_url else None,
+    )
+
+
+def _load_sms(raw: dict[str, Any]) -> SmsConfig:
+    webhook_url = raw.get("webhook_url")
+    return SmsConfig(
+        webhook_url=str(webhook_url) if webhook_url else None,
+        dry_run=bool(raw.get("dry_run", True)),
+    )
+
+
 def _load_target(raw: dict[str, Any]) -> TargetConfig:
     required = ["name", "url", "available_regex"]
     missing = [key for key in required if not raw.get(key)]
@@ -88,6 +122,8 @@ def _load_target(raw: dict[str, Any]) -> TargetConfig:
 
     sold_out_regex = raw.get("sold_out_regex")
     open_url = raw.get("open_url")
+    purchase_form_url = raw.get("purchase_form_url")
+    prefill = raw.get("prefill", {})
     return TargetConfig(
         name=str(raw["name"]),
         url=str(raw["url"]),
@@ -95,5 +131,6 @@ def _load_target(raw: dict[str, Any]) -> TargetConfig:
         enabled=bool(raw.get("enabled", True)),
         sold_out_regex=str(sold_out_regex) if sold_out_regex else None,
         open_url=str(open_url) if open_url else None,
+        purchase_form_url=str(purchase_form_url) if purchase_form_url else None,
+        prefill={str(key): str(value) for key, value in prefill.items()} if prefill else None,
     )
-
