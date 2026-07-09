@@ -77,8 +77,13 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 0
 
-        store = SubscriberStore(Path(config.service.subscribers_path))
+        store = SubscriberStore(config.resolve_path(config.service.subscribers_path))
         if args.add_subscriber:
+            if args.subscriber_target and args.subscriber_target not in {
+                target.name for target in config.targets
+            }:
+                raise ValueError(f"unknown subscriber target: {args.subscriber_target}")
+
             store.add(
                 Subscriber(
                     phone=args.add_subscriber,

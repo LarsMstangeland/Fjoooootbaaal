@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from html import unescape
-from pathlib import Path
 from typing import Callable
 import logging
 import re
@@ -38,7 +37,7 @@ class TicketMonitor:
         self.config = config
         self.should_stop = should_stop or (lambda: False)
         self.targets = [self._compile_target(target) for target in config.enabled_targets]
-        self.subscribers = SubscriberStore(Path(config.service.subscribers_path))
+        self.subscribers = SubscriberStore(config.resolve_path(config.service.subscribers_path))
         self.already_notified: set[str] = set()
 
     def run(self) -> None:

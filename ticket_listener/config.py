@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 import tomllib
 
 
@@ -51,10 +52,17 @@ class Config:
     service: ServiceConfig
     sms: SmsConfig
     targets: list[TargetConfig]
+    config_dir: Path
 
     @property
     def enabled_targets(self) -> list[TargetConfig]:
         return [target for target in self.targets if target.enabled]
+
+    def resolve_path(self, path: str) -> Path:
+        candidate = Path(path)
+        if candidate.is_absolute():
+            return candidate
+        return self.config_dir / candidate
 
 
 def load_config(path: Path) -> Config:
@@ -72,7 +80,15 @@ def load_config(path: Path) -> Config:
     sms = _load_sms(raw.get("sms", {}))
     targets = [_load_target(item) for item in raw.get("targets", [])]
 
-    config = Config(app=app, actions=actions, service=service, sms=sms, targets=targets)
+    config = Config(
+        app=app,
+        actions=actions,
+        service=service,
+        sms=sms,
+        targets=targets,
+        config_dir=path.resolve().parent,
+    )
+    _validate_config(config)
     if not config.enabled_targets:
         raise ValueError("No enabled targets configured.")
 
@@ -134,3 +150,25 @@ def _load_target(raw: dict[str, Any]) -> TargetConfig:
         purchase_form_url=str(purchase_form_url) if purchase_form_url else None,
         prefill={str(key): str(value) for key, value in prefill.items()} if prefill else None,
     )
+
+
+def _validate_config(config: Config) -> None:
+    if config.app.interval_secs < 5:
+        raise ValueError("app.interval_secs must be at least 5 seconds")
+    if config.app.request_timeout_secs < 1:
+        raise ValueError("app.request_timeout_secs must be at least 1 second")
+    if not config.sms.dry_run and not config.sms.webhook_url:
+        raise ValueError("sms.webhook_url is required when sms.dry_run is false")
+
+    urls = [config.service.purchase_form_url, config.sms.webhook_url, config.actions.webhook_url]
+    for target in config.targets:
+        urls.extend([target.url, target.open_url, target.purchase_form_url])
+
+    for url in [item for item in urls if item]:
+        _validate_http_url(url)
+
+
+def _validate_http_url(url: str) -> None:
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError(f"Invalid URL: {url}")
