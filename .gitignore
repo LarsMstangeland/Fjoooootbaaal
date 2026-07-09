@@ -1,0 +1,6 @@
+/.venv/
+/.env
+/config.toml
+/logs/
+__pycache__/
+*.pyc

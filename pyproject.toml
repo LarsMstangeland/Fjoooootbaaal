@@ -1,0 +1,7 @@
+[project]
+name = "ticket-listener"
+version = "0.1.0"
+description = "Personal ticket availability listener with browser/webhook notifications."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []

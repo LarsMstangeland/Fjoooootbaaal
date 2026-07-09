@@ -1,0 +1,22 @@
+[app]
+interval_secs = 15
+request_timeout_secs = 10
+user_agent = "ticket-listener/0.1 (+personal availability monitor)"
+
+[actions]
+open_browser = true
+notify_once_per_target = true
+# Optional Discord/Slack-style webhook. Leave blank to disable.
+# webhook_url = "https://discord.com/api/webhooks/..."
+
+[[targets]]
+name = "Example club tickets"
+enabled = true
+url = "https://example.com/tickets"
+# The monitor marks this as available if this regex matches the response body.
+available_regex = "(?i)(buy now|add to basket|tickets available|kjøp|ledig)"
+# If this regex matches, it overrides available_regex and marks the page as sold out.
+sold_out_regex = "(?i)(sold out|utsolgt|no tickets|ikke tilgjengelig)"
+# Optional: open a separate URL when available, e.g. the exact checkout/event URL.
+open_url = "https://example.com/tickets"
+
