@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 import tomllib
+import re
 
 
 @dataclass(frozen=True)
@@ -42,6 +43,7 @@ class TargetConfig:
     sold_out_regex: str | None = None
     open_url: str | None = None
     purchase_form_url: str | None = None
+    purchase_link_regex: str | None = None
     prefill: dict[str, str] | None = None
 
 
@@ -139,6 +141,7 @@ def _load_target(raw: dict[str, Any]) -> TargetConfig:
     sold_out_regex = raw.get("sold_out_regex")
     open_url = raw.get("open_url")
     purchase_form_url = raw.get("purchase_form_url")
+    purchase_link_regex = raw.get("purchase_link_regex")
     prefill = raw.get("prefill", {})
     return TargetConfig(
         name=str(raw["name"]),
@@ -148,6 +151,7 @@ def _load_target(raw: dict[str, Any]) -> TargetConfig:
         sold_out_regex=str(sold_out_regex) if sold_out_regex else None,
         open_url=str(open_url) if open_url else None,
         purchase_form_url=str(purchase_form_url) if purchase_form_url else None,
+        purchase_link_regex=str(purchase_link_regex) if purchase_link_regex else None,
         prefill={str(key): str(value) for key, value in prefill.items()} if prefill else None,
     )
 
@@ -163,6 +167,11 @@ def _validate_config(config: Config) -> None:
     urls = [config.service.purchase_form_url, config.sms.webhook_url, config.actions.webhook_url]
     for target in config.targets:
         urls.extend([target.url, target.open_url, target.purchase_form_url])
+        if target.purchase_link_regex:
+            try:
+                re.compile(target.purchase_link_regex)
+            except re.error as error:
+                raise ValueError(f"Invalid purchase_link_regex for {target.name}: {error}") from error
 
     for url in [item for item in urls if item]:
         _validate_http_url(url)

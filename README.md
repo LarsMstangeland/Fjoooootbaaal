@@ -33,6 +33,10 @@ List brukere:
 uv run python -m ticket_listener.cli --config config.toml --list-subscribers
 ```
 
+Varslingslenken bygges som en prefilled form-lenke. Naar Fotballfesten-siden viser en
+Fanparks booking-lenke, sendes den videre med query-parametre for `phone`, `name`,
+`target`, `ticket_url`, `event`, `venue`, `quantity` og `guests`.
+
 ## Kjore i bakgrunnen paa Windows
 
 Start skjult i bakgrunnen:

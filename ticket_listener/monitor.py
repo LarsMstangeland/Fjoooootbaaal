@@ -14,7 +14,7 @@ import webbrowser
 
 from ticket_listener.config import Config, TargetConfig
 from ticket_listener.notify import send_sms_webhook, send_webhook
-from ticket_listener.subscribers import SubscriberStore
+from ticket_listener.subscribers import Subscriber, SubscriberStore
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,13 @@ class CompiledTarget:
     config: TargetConfig
     available_regex: re.Pattern[str]
     sold_out_regex: re.Pattern[str] | None
+    purchase_link_regex: re.Pattern[str] | None
+
+
+@dataclass(frozen=True)
+class TargetCheck:
+    availability: Availability
+    purchase_url: str | None = None
 
 
 class TicketMonitor:
@@ -58,12 +65,12 @@ class TicketMonitor:
 
     def _check_and_handle(self, target: CompiledTarget) -> None:
         try:
-            availability = self._check_target(target)
+            check = self._check_target(target)
         except Exception as error:
             logger.warning("target check failed for %s: %s", target.config.name, error)
             return
 
-        if availability is Availability.AVAILABLE:
+        if check.availability is Availability.AVAILABLE:
             should_notify = (
                 not self.config.actions.notify_once_per_target
                 or target.config.name not in self.already_notified
@@ -71,25 +78,26 @@ class TicketMonitor:
             self.already_notified.add(target.config.name)
 
             if should_notify:
-                self._handle_available(target.config)
+                self._handle_available(target.config, check.purchase_url)
             else:
                 logger.debug("%s still available; notification already sent", target.config.name)
-        elif availability is Availability.SOLD_OUT:
+        elif check.availability is Availability.SOLD_OUT:
             logger.info("%s: sold out or not open yet", target.config.name)
         else:
             logger.info("%s: availability unknown", target.config.name)
 
-    def _check_target(self, target: CompiledTarget) -> Availability:
+    def _check_target(self, target: CompiledTarget) -> TargetCheck:
         body = self._fetch(target.config.url)
         normalized_body = unescape(body)
+        purchase_url = self._extract_purchase_url(target, normalized_body)
 
         if target.sold_out_regex and target.sold_out_regex.search(normalized_body):
-            return Availability.SOLD_OUT
+            return TargetCheck(Availability.SOLD_OUT, purchase_url)
 
         if target.available_regex.search(normalized_body):
-            return Availability.AVAILABLE
+            return TargetCheck(Availability.AVAILABLE, purchase_url)
 
-        return Availability.UNKNOWN
+        return TargetCheck(Availability.UNKNOWN, purchase_url)
 
     def _fetch(self, url: str) -> str:
         request = urllib.request.Request(
@@ -110,13 +118,13 @@ class TicketMonitor:
         except urllib.error.HTTPError as error:
             raise RuntimeError(f"HTTP {error.code} from {url}") from error
 
-    def _handle_available(self, target: TargetConfig) -> None:
-        open_url = target.open_url or target.url
+    def _handle_available(self, target: TargetConfig, purchase_url: str | None) -> None:
+        open_url = purchase_url or target.open_url or target.url
         message = f"Tickets may be available for {target.name}: {open_url}"
         logger.warning(message)
 
         send_webhook(self.config.actions.webhook_url, message, self.config.app.request_timeout_secs)
-        self._notify_subscribers(target)
+        self._notify_subscribers(target, purchase_url)
 
         if self.config.actions.open_browser:
             webbrowser.open(open_url)
@@ -135,16 +143,19 @@ class TicketMonitor:
             sold_out_regex=re.compile(target.sold_out_regex, flags)
             if target.sold_out_regex
             else None,
+            purchase_link_regex=re.compile(target.purchase_link_regex, flags)
+            if target.purchase_link_regex
+            else None,
         )
 
-    def _notify_subscribers(self, target: TargetConfig) -> None:
+    def _notify_subscribers(self, target: TargetConfig, purchase_url: str | None = None) -> None:
         subscribers = self.subscribers.list(target.name)
         if not subscribers:
             logger.warning("no phone subscribers registered for %s", target.name)
             return
 
         for subscriber in subscribers:
-            form_link = self._build_purchase_form_link(target, subscriber.phone)
+            form_link = self._build_purchase_form_link(target, subscriber, purchase_url)
             message = f"{target.name} may be open. Continue here: {form_link}"
             send_sms_webhook(
                 self.config.sms.webhook_url,
@@ -154,20 +165,51 @@ class TicketMonitor:
                 self.config.sms.dry_run,
             )
 
-    def _build_purchase_form_link(self, target: TargetConfig, phone: str) -> str:
+    def _build_purchase_form_link(
+        self, target: TargetConfig, subscriber: Subscriber, purchase_url: str | None = None
+    ) -> str:
         base_url = (
-            target.purchase_form_url
+            purchase_url
+            or target.purchase_form_url
             or self.config.service.purchase_form_url
             or target.open_url
             or target.url
         )
         query = {
-            "phone": phone,
+            "phone": subscriber.phone,
             "target": target.name,
             "ticket_url": target.open_url or target.url,
         }
+        if subscriber.name:
+            query["name"] = subscriber.name
         if target.prefill:
             query.update(target.prefill)
 
         separator = "&" if urllib.parse.urlparse(base_url).query else "?"
         return f"{base_url}{separator}{urllib.parse.urlencode(query)}"
+
+    @staticmethod
+    def _extract_purchase_url(target: CompiledTarget, body: str) -> str | None:
+        if target.purchase_link_regex:
+            match = target.purchase_link_regex.search(body)
+            if match:
+                return TicketMonitor._clean_url(match.group(1) if match.groups() else match.group(0))
+
+        match = re.search(r"https://fanparks\.fanparks\.com/booking/[^\"'<>\s]+", body)
+        if match:
+            return TicketMonitor._clean_url(match.group(0))
+
+        return None
+
+    @staticmethod
+    def _clean_url(url: str) -> str:
+        parsed = urllib.parse.urlparse(url)
+        query = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
+        cleaned_query = [
+            (key, value)
+            for key, value in query
+            if key != "_gl" and not key.lower().startswith("utm_")
+        ]
+        return urllib.parse.urlunparse(
+            parsed._replace(query=urllib.parse.urlencode(cleaned_query))
+        )
