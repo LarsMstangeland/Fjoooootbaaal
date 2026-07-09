@@ -34,7 +34,7 @@ name = "Fotballfesten Frogner Stadion"
 enabled = true
 url = "https://www.fotballfesten.no/frognerstadion"
 # The monitor marks this as available if this regex matches the response body.
-available_regex = "(?i)(kj.p|bestill|velg billetter|tickets available|buy now|add to basket|purchase)"
+available_regex = "(?i)(book billetter|kj.p|bestill|velg billetter|tickets available|buy now|add to basket|purchase|fanparks\\.fanparks\\.com/booking)"
 # If this regex matches, it overrides available_regex and marks the page as sold out.
 sold_out_regex = "(?i)(billetter kommer snart|utsolgt|sold out|no tickets|ikke tilgjengelig)"
 # Optional: open a separate URL when available, e.g. the exact checkout/event URL.

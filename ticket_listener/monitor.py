@@ -94,6 +94,9 @@ class TicketMonitor:
         if target.sold_out_regex and target.sold_out_regex.search(normalized_body):
             return TargetCheck(Availability.SOLD_OUT, purchase_url)
 
+        if purchase_url:
+            return TargetCheck(Availability.AVAILABLE, purchase_url)
+
         if target.available_regex.search(normalized_body):
             return TargetCheck(Availability.AVAILABLE, purchase_url)
 
