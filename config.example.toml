@@ -12,7 +12,7 @@ notify_once_per_target = true
 [service]
 subscribers_path = "subscribers.json"
 # Base form users receive before purchase. Query params are appended automatically.
-purchase_form_url = "https://example.com/ticket-request"
+purchase_form_url = "https://www.fotballfesten.no/frognerstadion"
 
 [sms]
 # Dry-run logs SMS payloads instead of sending them. Set to false when webhook_url is real.
@@ -21,15 +21,15 @@ dry_run = true
 # webhook_url = "https://your-sms-provider.example/send"
 
 [[targets]]
-name = "Example club tickets"
+name = "Fotballfesten Frogner Stadion"
 enabled = true
-url = "https://example.com/tickets"
+url = "https://www.fotballfesten.no/frognerstadion"
 # The monitor marks this as available if this regex matches the response body.
-available_regex = "(?i)(buy now|add to basket|tickets available|kjop|ledig)"
+available_regex = "(?i)(kj.p|bestill|velg billetter|tickets available|buy now|add to basket|purchase)"
 # If this regex matches, it overrides available_regex and marks the page as sold out.
-sold_out_regex = "(?i)(sold out|utsolgt|no tickets|ikke tilgjengelig)"
+sold_out_regex = "(?i)(billetter kommer snart|utsolgt|sold out|no tickets|ikke tilgjengelig)"
 # Optional: open a separate URL when available, e.g. the exact checkout/event URL.
-open_url = "https://example.com/tickets"
+open_url = "https://www.fotballfesten.no/frognerstadion"
 # Optional target-specific form URL. Falls back to [service].purchase_form_url.
 # purchase_form_url = "https://example.com/ticket-request"
-prefill = { event = "Example club tickets", quantity = "2" }
+prefill = { event = "Norge - England kvartfinale", venue = "Frogner Stadion", quantity = "2" }
