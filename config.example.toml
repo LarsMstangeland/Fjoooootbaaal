@@ -19,7 +19,14 @@ verify_links = true
 [sms]
 # Dry-run logs SMS payloads instead of sending them. Set to false when webhook_url is real.
 dry_run = true
-# Generic SMS gateway webhook. It receives JSON: {"to": "+4712345678", "message": "..."}
+# provider can be "twilio" or "webhook".
+provider = "twilio"
+# Twilio credentials are read from environment variables, never from committed config.
+twilio_account_sid_env = "TWILIO_ACCOUNT_SID"
+twilio_auth_token_env = "TWILIO_AUTH_TOKEN"
+twilio_from_env = "TWILIO_FROM"
+
+# Alternative generic SMS gateway webhook. It receives JSON: {"to": "+4712345678", "message": "..."}
 # webhook_url = "https://your-sms-provider.example/send"
 
 [[targets]]

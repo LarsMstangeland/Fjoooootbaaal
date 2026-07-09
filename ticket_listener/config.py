@@ -31,7 +31,11 @@ class ServiceConfig:
 
 @dataclass(frozen=True)
 class SmsConfig:
+    provider: str = "webhook"
     webhook_url: str | None = None
+    twilio_account_sid_env: str = "TWILIO_ACCOUNT_SID"
+    twilio_auth_token_env: str = "TWILIO_AUTH_TOKEN"
+    twilio_from_env: str = "TWILIO_FROM"
     dry_run: bool = True
 
 
@@ -129,7 +133,11 @@ def _load_service(raw: dict[str, Any]) -> ServiceConfig:
 def _load_sms(raw: dict[str, Any]) -> SmsConfig:
     webhook_url = raw.get("webhook_url")
     return SmsConfig(
+        provider=str(raw.get("provider", "webhook")),
         webhook_url=str(webhook_url) if webhook_url else None,
+        twilio_account_sid_env=str(raw.get("twilio_account_sid_env", "TWILIO_ACCOUNT_SID")),
+        twilio_auth_token_env=str(raw.get("twilio_auth_token_env", "TWILIO_AUTH_TOKEN")),
+        twilio_from_env=str(raw.get("twilio_from_env", "TWILIO_FROM")),
         dry_run=bool(raw.get("dry_run", True)),
     )
 
@@ -163,8 +171,10 @@ def _validate_config(config: Config) -> None:
         raise ValueError("app.interval_secs must be at least 5 seconds")
     if config.app.request_timeout_secs < 1:
         raise ValueError("app.request_timeout_secs must be at least 1 second")
-    if not config.sms.dry_run and not config.sms.webhook_url:
-        raise ValueError("sms.webhook_url is required when sms.dry_run is false")
+    if config.sms.provider not in {"webhook", "twilio"}:
+        raise ValueError("sms.provider must be either 'webhook' or 'twilio'")
+    if not config.sms.dry_run and config.sms.provider == "webhook" and not config.sms.webhook_url:
+        raise ValueError("sms.webhook_url is required when sms.provider is webhook")
 
     urls = [config.service.purchase_form_url, config.sms.webhook_url, config.actions.webhook_url]
     for target in config.targets:

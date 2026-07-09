@@ -39,6 +39,16 @@ Send en testmelding gjennom samme flyt som ekte varsler:
 uv run python -m ticket_listener.cli --config config.toml --test-notification
 ```
 
+For ekte SMS med Twilio:
+
+```powershell
+$env:TWILIO_ACCOUNT_SID = "AC..."
+$env:TWILIO_AUTH_TOKEN = "..."
+$env:TWILIO_FROM = "+1..."
+```
+
+Sett deretter `[sms] dry_run = false` og `provider = "twilio"` i `config.toml`.
+
 Varslingslenken bygges som en prefilled form-lenke. Naar Fotballfesten-siden viser en
 Fanparks booking-lenke, sendes den videre med query-parametre for `phone`, `name`,
 `target`, `ticket_url`, `event`, `venue`, `quantity` og `guests`.

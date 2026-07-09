@@ -13,7 +13,7 @@ import urllib.parse
 import webbrowser
 
 from ticket_listener.config import Config, TargetConfig
-from ticket_listener.notify import send_sms_webhook, send_webhook
+from ticket_listener.notify import SmsSettings, send_sms, send_webhook
 from ticket_listener.subscribers import Subscriber, SubscriberStore
 
 logger = logging.getLogger(__name__)
@@ -158,12 +158,18 @@ class TicketMonitor:
         for subscriber in subscribers:
             form_link = self._build_purchase_form_link(target, subscriber, verified_purchase_url)
             message = f"{target.name} may be open. Continue here: {form_link}"
-            send_sms_webhook(
-                self.config.sms.webhook_url,
+            send_sms(
+                SmsSettings(
+                    provider=self.config.sms.provider,
+                    webhook_url=self.config.sms.webhook_url,
+                    twilio_account_sid_env=self.config.sms.twilio_account_sid_env,
+                    twilio_auth_token_env=self.config.sms.twilio_auth_token_env,
+                    twilio_from_env=self.config.sms.twilio_from_env,
+                    dry_run=self.config.sms.dry_run,
+                ),
                 subscriber.phone,
                 message,
                 self.config.app.request_timeout_secs,
-                self.config.sms.dry_run,
             )
 
     def notify_subscribers_for_test(self, target: TargetConfig) -> None:
