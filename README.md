@@ -33,6 +33,12 @@ List brukere:
 uv run python -m ticket_listener.cli --config config.toml --list-subscribers
 ```
 
+Send en testmelding gjennom samme flyt som ekte varsler:
+
+```powershell
+uv run python -m ticket_listener.cli --config config.toml --test-notification
+```
+
 Varslingslenken bygges som en prefilled form-lenke. Naar Fotballfesten-siden viser en
 Fanparks booking-lenke, sendes den videre med query-parametre for `phone`, `name`,
 `target`, `ticket_url`, `event`, `venue`, `quantity` og `guests`.

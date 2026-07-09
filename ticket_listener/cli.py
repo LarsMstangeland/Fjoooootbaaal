@@ -50,6 +50,15 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="List stored subscribers, then exit.",
     )
+    parser.add_argument(
+        "--test-notification",
+        action="store_true",
+        help="Send a test notification through the configured subscriber flow, then exit.",
+    )
+    parser.add_argument(
+        "--test-target",
+        help="Optional target name for --test-notification. Defaults to the first enabled target.",
+    )
     return parser
 
 
@@ -105,6 +114,11 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         monitor = TicketMonitor(config, should_stop=lambda: stop_requested)
+        if args.test_notification:
+            target = _select_target(monitor, args.test_target)
+            monitor.notify_subscribers_for_test(target.config)
+            return 0
+
         monitor.run()
     except KeyboardInterrupt:
         return 130
@@ -113,6 +127,17 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     return 0
+
+
+def _select_target(monitor: TicketMonitor, target_name: str | None):
+    if target_name is None:
+        return monitor.targets[0]
+
+    for target in monitor.targets:
+        if target.config.name == target_name:
+            return target
+
+    raise ValueError(f"unknown test target: {target_name}")
 
 
 if __name__ == "__main__":

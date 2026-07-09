@@ -36,4 +36,4 @@ open_url = "https://www.fotballfesten.no/frognerstadion"
 purchase_link_regex = "https://fanparks\\.fanparks\\.com/booking/[^\"'<>\\s]+"
 # Optional target-specific form URL. Falls back to [service].purchase_form_url.
 # purchase_form_url = "https://example.com/ticket-request"
-prefill = { event = "Norge - England kvartfinale", venue = "Frogner Stadion", quantity = "2", guests = "2" }
+prefill = { event = "Norge - England kvartfinale", venue = "Frogner Stadion", ticket_type = "bord", quantity = "1", guests = "8" }

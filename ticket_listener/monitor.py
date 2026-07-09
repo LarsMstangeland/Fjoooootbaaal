@@ -166,6 +166,10 @@ class TicketMonitor:
                 self.config.sms.dry_run,
             )
 
+    def notify_subscribers_for_test(self, target: TargetConfig) -> None:
+        logger.warning("sending test notification for %s", target.name)
+        self._notify_subscribers(target)
+
     def _build_purchase_form_link(
         self, target: TargetConfig, subscriber: Subscriber, purchase_url: str | None = None
     ) -> str:
