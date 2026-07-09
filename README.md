@@ -36,6 +36,8 @@ uv run python -m ticket_listener.cli --config config.toml --list-subscribers
 Varslingslenken bygges som en prefilled form-lenke. Naar Fotballfesten-siden viser en
 Fanparks booking-lenke, sendes den videre med query-parametre for `phone`, `name`,
 `target`, `ticket_url`, `event`, `venue`, `quantity` og `guests`.
+Rett for SMS sendes sjekker appen at lenken svarer. Hvis Fanparks-lenken er dod,
+brukes fallback-lenken i config, og til slutt selve event-siden.
 
 ## Kjore i bakgrunnen paa Windows
 

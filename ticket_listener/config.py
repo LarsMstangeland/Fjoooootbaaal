@@ -26,6 +26,7 @@ class ActionConfig:
 class ServiceConfig:
     subscribers_path: str = "subscribers.json"
     purchase_form_url: str | None = None
+    verify_links: bool = True
 
 
 @dataclass(frozen=True)
@@ -121,6 +122,7 @@ def _load_service(raw: dict[str, Any]) -> ServiceConfig:
     return ServiceConfig(
         subscribers_path=str(raw.get("subscribers_path", "subscribers.json")),
         purchase_form_url=str(purchase_form_url) if purchase_form_url else None,
+        verify_links=bool(raw.get("verify_links", True)),
     )
 
 

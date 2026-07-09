@@ -13,6 +13,8 @@ notify_once_per_target = true
 subscribers_path = "subscribers.json"
 # Base form users receive before purchase. Query params are appended automatically.
 purchase_form_url = "https://www.fotballfesten.no/frognerstadion"
+# Check links before sending SMS, and fall back if the Fanparks link is dead.
+verify_links = true
 
 [sms]
 # Dry-run logs SMS payloads instead of sending them. Set to false when webhook_url is real.

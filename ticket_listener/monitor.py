@@ -154,8 +154,9 @@ class TicketMonitor:
             logger.warning("no phone subscribers registered for %s", target.name)
             return
 
+        verified_purchase_url = self._verified_purchase_url(target, purchase_url)
         for subscriber in subscribers:
-            form_link = self._build_purchase_form_link(target, subscriber, purchase_url)
+            form_link = self._build_purchase_form_link(target, subscriber, verified_purchase_url)
             message = f"{target.name} may be open. Continue here: {form_link}"
             send_sms_webhook(
                 self.config.sms.webhook_url,
@@ -200,6 +201,55 @@ class TicketMonitor:
             return TicketMonitor._clean_url(match.group(0))
 
         return None
+
+    def _verified_purchase_url(self, target: TargetConfig, purchase_url: str | None) -> str | None:
+        if not self.config.service.verify_links:
+            return purchase_url
+
+        if purchase_url and self._url_is_alive(purchase_url):
+            return purchase_url
+
+        if purchase_url:
+            logger.warning("purchase link failed health check: %s", purchase_url)
+
+        fallback_url = target.purchase_form_url or self.config.service.purchase_form_url
+        if fallback_url and self._url_is_alive(fallback_url):
+            logger.warning("using fallback form link: %s", fallback_url)
+            return fallback_url
+
+        if fallback_url:
+            logger.warning("fallback form link failed health check: %s", fallback_url)
+
+        open_url = target.open_url or target.url
+        if self._url_is_alive(open_url):
+            logger.warning("using event page as fallback link: %s", open_url)
+            return open_url
+
+        logger.error("all candidate links failed health check for %s", target.name)
+        return None
+
+    def _url_is_alive(self, url: str) -> bool:
+        for method in ("HEAD", "GET"):
+            request = urllib.request.Request(
+                url,
+                headers={"User-Agent": self.config.app.user_agent},
+                method=method,
+            )
+            try:
+                with urllib.request.urlopen(
+                    request, timeout=self.config.app.request_timeout_secs
+                ) as response:
+                    return 200 <= response.status < 400
+            except urllib.error.HTTPError as error:
+                if method == "HEAD" and error.code in {403, 405, 501}:
+                    continue
+                return 200 <= error.code < 400
+            except urllib.error.URLError:
+                if method == "HEAD":
+                    continue
+                return False
+
+        return False
 
     @staticmethod
     def _clean_url(url: str) -> str:
