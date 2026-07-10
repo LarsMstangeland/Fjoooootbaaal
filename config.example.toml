@@ -41,6 +41,9 @@ sold_out_regex = "(?i)(billetter kommer snart|utsolgt|sold out|no tickets|ikke t
 open_url = "https://www.fotballfesten.no/frognerstadion"
 # When the event page exposes a Fanparks booking URL, use it as the form link.
 purchase_link_regex = "https://fanparks\\.fanparks\\.com/booking/[^\"'<>\\s]+"
+# Follow the Fanparks page and alert only when real matching inventory appears.
+inventory_available_regex = "(?is)(Norge\\s+vs\\s+England|Norge\\s+-\\s+England).*?(Få tilgjengelig|Kjøp|Book|1\\s+bord\\s*=\\s*8\\s+plasser|Premium|Reservert bord)"
+inventory_sold_out_regex = "(?is)(Viser alle 0 kamper|Ingen kamper tilgjengelig|Norge\\s+vs\\s+England.*?Utsolgt\\s+Utsolgt)"
 # Optional target-specific form URL. Falls back to [service].purchase_form_url.
 # purchase_form_url = "https://example.com/ticket-request"
 prefill = { event = "Norge - England kvartfinale", venue = "Frogner Stadion", ticket_type = "bord", quantity = "1", guests = "8" }

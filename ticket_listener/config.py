@@ -49,6 +49,8 @@ class TargetConfig:
     open_url: str | None = None
     purchase_form_url: str | None = None
     purchase_link_regex: str | None = None
+    inventory_available_regex: str | None = None
+    inventory_sold_out_regex: str | None = None
     prefill: dict[str, str] | None = None
 
 
@@ -152,6 +154,8 @@ def _load_target(raw: dict[str, Any]) -> TargetConfig:
     open_url = raw.get("open_url")
     purchase_form_url = raw.get("purchase_form_url")
     purchase_link_regex = raw.get("purchase_link_regex")
+    inventory_available_regex = raw.get("inventory_available_regex")
+    inventory_sold_out_regex = raw.get("inventory_sold_out_regex")
     prefill = raw.get("prefill", {})
     return TargetConfig(
         name=str(raw["name"]),
@@ -162,6 +166,12 @@ def _load_target(raw: dict[str, Any]) -> TargetConfig:
         open_url=str(open_url) if open_url else None,
         purchase_form_url=str(purchase_form_url) if purchase_form_url else None,
         purchase_link_regex=str(purchase_link_regex) if purchase_link_regex else None,
+        inventory_available_regex=str(inventory_available_regex)
+        if inventory_available_regex
+        else None,
+        inventory_sold_out_regex=str(inventory_sold_out_regex)
+        if inventory_sold_out_regex
+        else None,
         prefill={str(key): str(value) for key, value in prefill.items()} if prefill else None,
     )
 
@@ -184,6 +194,20 @@ def _validate_config(config: Config) -> None:
                 re.compile(target.purchase_link_regex)
             except re.error as error:
                 raise ValueError(f"Invalid purchase_link_regex for {target.name}: {error}") from error
+        if target.inventory_available_regex:
+            try:
+                re.compile(target.inventory_available_regex)
+            except re.error as error:
+                raise ValueError(
+                    f"Invalid inventory_available_regex for {target.name}: {error}"
+                ) from error
+        if target.inventory_sold_out_regex:
+            try:
+                re.compile(target.inventory_sold_out_regex)
+            except re.error as error:
+                raise ValueError(
+                    f"Invalid inventory_sold_out_regex for {target.name}: {error}"
+                ) from error
 
     for url in [item for item in urls if item]:
         _validate_http_url(url)

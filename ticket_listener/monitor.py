@@ -31,6 +31,8 @@ class CompiledTarget:
     available_regex: re.Pattern[str]
     sold_out_regex: re.Pattern[str] | None
     purchase_link_regex: re.Pattern[str] | None
+    inventory_available_regex: re.Pattern[str] | None
+    inventory_sold_out_regex: re.Pattern[str] | None
 
 
 @dataclass(frozen=True)
@@ -95,7 +97,10 @@ class TicketMonitor:
             return TargetCheck(Availability.SOLD_OUT, purchase_url)
 
         if purchase_url:
-            return TargetCheck(Availability.AVAILABLE, purchase_url)
+            return TargetCheck(
+                self._check_inventory_page(target, purchase_url),
+                purchase_url,
+            )
 
         if target.available_regex.search(normalized_body):
             return TargetCheck(Availability.AVAILABLE, purchase_url)
@@ -148,6 +153,12 @@ class TicketMonitor:
             else None,
             purchase_link_regex=re.compile(target.purchase_link_regex, flags)
             if target.purchase_link_regex
+            else None,
+            inventory_available_regex=re.compile(target.inventory_available_regex, flags)
+            if target.inventory_available_regex
+            else None,
+            inventory_sold_out_regex=re.compile(target.inventory_sold_out_regex, flags)
+            if target.inventory_sold_out_regex
             else None,
         )
 
@@ -214,6 +225,22 @@ class TicketMonitor:
             return TicketMonitor._clean_url(match.group(0))
 
         return None
+
+    def _check_inventory_page(self, target: CompiledTarget, purchase_url: str) -> Availability:
+        try:
+            body = unescape(self._fetch(purchase_url))
+        except Exception as error:
+            logger.warning("inventory check failed for %s: %s", purchase_url, error)
+            return Availability.UNKNOWN
+
+        if target.inventory_sold_out_regex and target.inventory_sold_out_regex.search(body):
+            return Availability.SOLD_OUT
+
+        if target.inventory_available_regex and target.inventory_available_regex.search(body):
+            return Availability.AVAILABLE
+
+        logger.info("booking page exists, but no matching inventory is available yet")
+        return Availability.UNKNOWN
 
     def _verified_purchase_url(self, target: TargetConfig, purchase_url: str | None) -> str | None:
         if not self.config.service.verify_links:
